@@ -1,5 +1,46 @@
-function init() {
+async function init() {
+	var is_default_user = document.cookie.lenght === 0;
+	var token = await get_token();
+	var task_data = null;
+	if(token) {
+		task_data = await get_task_data(token, true);
+	}
+
+	const err_func = (e, msg) => {
+		const p = document.createElement('p');
+		p.textContent = `Sorry, testing is currently unavailable: ${msg}. Try again later.`;
+		e.appendChild(p);
+	};
+
 	for(var e of document.getElementsByClassName('test_section')) {
+		if(!token) {
+			err_func(e, 'can not create test account');
+			continue;
+		}
+
+		if(!task_data) {
+			err_func(e, 'no testing data');
+			continue;
+		}
+
+		const folders = e.id.split('__');
+		const project = task_data[folders[1]];
+		if(!project) {
+			err_func(e, 'project for this task is not found');
+			continue;
+		}
+		const unit = project['units'][folders[2]];
+		if(!unit) {
+			err_func(e, 'unit for this task is not found');
+			continue;
+		}
+		const task = unit['tasks'][folders[3]];
+		if(!task) {
+			err_func(e, 'no such task in testing data');
+			continue;
+		}
+		const task_id = task['id'];
+
 		const login = document.createElement('div');
 		login.classList.add('login');
 
@@ -34,12 +75,13 @@ function init() {
 
 		const test_log = document.createElement('textarea');
 		test_log.classList.add('test_log');
-		test_log.rows = 10;
-		test_log.cols = 80;
+		test_log.classList.add('pending_test');
 		test_log.readOnly = true;
-		test_log.value = 'To send solution, press Ctrl+Enter inside solution text area.';
+		test_log.value = `Inside solution text area press:
+Ctrl+D - to show task Description
+Ctrl+L - to show Logs
+Ctrl+S - to Send solution`;
 
-		const token = get_cookie_token();
 		if(token !== null) {
 			login.classList.add('hidden');
 		} else {
@@ -51,8 +93,7 @@ function init() {
 				return
 			}
 			this.disabled = true;
-			const task_id = e.id.split('_')[1];
-			await send_test(task_id, this.value, test_log);
+			await send_test(task_id, this.childNodes[1].value, test_log);
 			this.disabled = false;
 		});
 
@@ -94,30 +135,52 @@ function get_cookie_token() {
 	return null;
 }
 
+async function get_task_data(token, is_folder) {
+	const resp = await fetch(`https://kee-reel.com/cyber-cat?token=${token}&folders=${is_folder}`)
+	return await resp.json()
+}
+
 async function get_token(email, pass) {
 	const token = get_cookie_token();
-	if(token !== null) {
+	if(token) {
 		return token;
+	}
+	else if(!email && !pass)
+	{
+		const default_email = 'test@test.com';
+		const default_pass = '123456';
+		data = await get_token(default_email, default_pass);
+		if(!data['error']) {
+			return data['token'];
+		}
+		return null;
 	}
 	const resp = await fetch(`https://kee-reel.com/cyber-cat/login?email=${email}&pass=${pass}`)
 	return await resp.json()
 }
 
 async function send_test(task_id, source_text, test_log) {
-	const token = await get_token();
+	var token = await get_token();
+	var task_data = null;
 
 	const formData = new FormData();
 	formData.append('task_id', task_id);
 	formData.append('source_text', source_text);
 
 	test_log.value = 'Sending request...';
+	test_log.classList.add('pending_test');
+	test_log.classList.remove('failed_test');
+	test_log.classList.remove('passed_test');
 
 	const resp = await fetch(`https://kee-reel.com/cyber-cat?token=${token}`, {method: 'POST', body: formData})
 	const data = await resp.json()
 
+	test_log.classList.remove('pending_test');
 	if (data['error'] == null) {
-		test_log.value = 'No errors';
+		test_log.value = 'Yay! No errors!';
+		test_log.classList.add('passed_test');
 	} else {
+		test_log.classList.add('failed_test');
 		var err = data['error'];
 		switch(err['stage']) {
 			case 'build':
@@ -125,10 +188,15 @@ async function send_test(task_id, source_text, test_log) {
 ${err['msg']}`;
 				break;
 			case 'test':
-				test_log.value = `Test failed:
-Test parameters: ${err['params'].split(';')}
+				text = 'Test failed:'
+				if(err['params']) {
+					text += `
+Test parameters: ${err['params'].split(';')}`;
+				}
+				text += `
 Expected result: ${err['expected']}
 Actual result: ${err['result']}`;
+				test_log.value = text;
 				break;
 			default:
 				test_log.value = err['error'];
@@ -168,12 +236,15 @@ function create_code_editor() {
 }
 
 function update(text, result_element) {
+  if(!result_element) {
+	  return;
+  }
   // Handle final newlines (see article)
   if(text[text.length-1] == "\n") {
     text += " ";
   }
   // Update code
-  result_element.innerHTML = text.replace(new RegExp("&", "g"), "&amp;");
+  result_element.innerHTML = text.replace(new RegExp("&", "g"), "&amp;").replace(new RegExp("<", "g"), "&lt;"); /* Global RegExp */
   Prism.highlightElement(result_element); // Syntax Highlight
 }
 
@@ -191,11 +262,11 @@ function check_tab(element, event) {
 		event.preventDefault(); // stop normal
 		let before_tab = code.slice(0, element.selectionStart); // text before tab
 		let after_tab = code.slice(element.selectionEnd, element.value.length); // text after tab
-		let cursor_pos = element.selectionEnd + 5; // where cursor moves after tab - moving forward by 1 char to after tab
+		let cursor_pos = element.selectionEnd + 4; // where cursor moves after tab - moving forward by 1 char to after tab
 		element.value = before_tab + "    " + after_tab; // add tab char
 		// move cursor
-		element.selectionStart = element.value.length;
-		element.selectionEnd = element.selectionStart;
+		element.selectionStart = cursor_pos;
+		element.selectionEnd = cursor_pos;
 		update(element.value); // Update text to include indent
 	}
 }

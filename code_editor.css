@@ -2,11 +2,20 @@
 	display: flex; 
 	justify-content: space-between;
 	gap: 0px 0px; 
-	width: 60%;
+	width: 80%;
+	height: 85px;
 	margin: 40px auto;
 }
-.source_text { }
-.test_log { }
+.source_text {
+	width: 65%;
+}
+.test_log {
+	font-size: 12pt;
+	width: 30%;
+	resize: none;
+	color: white;
+	border: none;
+}
 .login {
 	display: flex;
 	flex-direction: column;
@@ -44,6 +53,15 @@
 }
 .hidden {
 	display: none;
+}
+.pending_test {
+	background: #1b1b1b;
+}
+.passed_test {
+	background: #0b8e00;
+}
+.failed_test {
+	background: #a20000;
 }
 
 .editing, .highlighting {
