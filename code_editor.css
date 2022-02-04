@@ -2,7 +2,6 @@
 	display: flex; 
 	justify-content: space-between;
 	gap: 0px 0px; 
-	width: 80%;
 	min-height: 85px;
 	margin: 40px auto;
 }
