@@ -49,17 +49,17 @@ function create_test_data(task_data, is_test_user, source_text) {
 	test_desc.readOnly = true;
 	var text = `Задача "${task_data['name']}"
 
-Описание:
+Описание задачи:
 ${task_data['desc']}`
 	if(task_data['input'] && Object.keys(task_data['input']).length > 0) {
 		text += `
 
-Входные параметры:
+Входные данные:
 ${task_data['input']}`
 	}
 	text += `
 
-Выходные параметры:
+Что программа должна вывести:
 ${task_data['output']}`;
 	test_desc.value = text;
 	sections.appendChild(test_desc);

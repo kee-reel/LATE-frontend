@@ -9,9 +9,11 @@
 	background: #1b1b1b;
 	width: 65%;
 	min-height: 200px;
+	border: 1px #333 solid;
 }
 .test_data {
 	width: 30%;
+	border: 1px #333 solid;
 }
 .test_data_tab {
 	width: 100%;
@@ -26,9 +28,11 @@
 .test_data_tabs {
 	display: flex;
 	justify-content: space-between;
+	height: 7%;
 }
 .test_data_sections {
 	display: flex;
+	height: 93%;
 }
 .test_log {
 	font-size: 12pt;
